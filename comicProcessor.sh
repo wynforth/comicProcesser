@@ -1,9 +1,14 @@
 #! /bin/bash
 
+#determine OS version, needed for some checks
 
-# CHANGELOG
-# v1.4
+os=$(uname)
+case $os in
+	Darwin ) platform="OSX";;
+	Linux ) platform="Linux";;
+esac
 
+echo "$platform"
 
 #requirement testing
 quit=false
@@ -74,7 +79,7 @@ sortFile()
 				cur=$(expr $cur + 1)
 				sortdir="${sortdir}/"
 			else
-				if [ "$sortdir" != */ ]; then
+				if [[ "$sortdir" != */ ]]; then
 					sortdir="${sortdir} $i"
 				else
 					sortdir="${sortdir}$i"
@@ -149,10 +154,17 @@ processFile()
     `$rar a -ep -m5 -x*.DS_Store -id[c,q,p,d] "${rarname}" "${folname}"`
 
 	#get file sizes
-	origsize=$($stat -f %z "$file")
-	zipsize=$($stat -f %z "$zipname")
-	rarsize=$($stat -f %z "$rarname")
-
+	if [ "$platform" = "OSX" ]; then
+		origsize=$($stat -f %z "$file")
+		zipsize=$($stat -f %z "$zipname")
+		rarsize=$($stat -f %z "$rarname")
+	elif [ "$platform" = "Linux" ]
+		origsize=$($stat -c %s "$file")
+		zipsize=$($stat -c %s "$zipname")
+		rarsize=$($stat -c %s "$rarname")
+	fi
+		
+		
 	#echo $origsize
 	if [ $zipsize -ge $rarsize ]; then
 		final=$rarname
@@ -349,7 +361,7 @@ if $interactive; then quiet=false; fi
 if $quiet; then	exec 1>$logfile; fi
 
 #convert relative path to absolute path for output
-if [ ! "$backup" = /* ]; then
+if [[ ! "$backup" = /* ]]; then
 	backup="$(pwd)/$backup"
 fi
 
