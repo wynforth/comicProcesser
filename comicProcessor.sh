@@ -3,36 +3,6 @@
 
 # CHANGELOG
 # v1.4
-#	- 'infinite' depth to the folders each section between a - is made into a folder 
-#	- depth level of folder structure defaults to 2
-# v1.3 
-# 	- added -#, --numbers toggle for determining whether issues numbers are preceded by a # or not (default assumes they are)
-# 	- fixed a bug in single issue processing putting the tmp directory in the wrong place which could cause errors
-# v1.2
-# 	- implemented single issue processing
-# 	
-# TO DO
-# - setting for how deep a folder structure to create default 2
-# - test if the files is an arhive before processing it
-# - option for not keeping a backup
-# - option for automode (quiet, no backup, recursive)
-# - option for superquiet mode (no output no logging)
-# - option to turn off sorting
-# - option to only sort
-# - split sorting off to its own function
-# - option for not setting the icon
-# - specify your own regular expression for sorting
-# - linux support
-# - have it unset the executable bit of archive files
-# - find alternatives to using external tools (mainly sips and seticon)
-# 
-# BUGS TO FIX
-
-
-
-
-
-
 
 
 #requirement testing
@@ -79,7 +49,51 @@ if $quit; then
 	exit
 fi
 
-
+function sortFile()
+{
+	file=$1
+	basename=$(basename "$file") #filename
+	
+	#used for sorting 
+	noext=${basename%.*}
+	if $pound; then
+		unnumbered=${noext%% \#*}
+	else
+		unnumbered=${noext%% [#0-9]**}
+	fi
+	
+	sortdir="${basedir}/"
+	cur=0
+	#loop through $unnumbered splitting on ' - '
+	for i in $(echo "$unnumbered")
+	do
+		if [[ "$cur" -lt "$depth" ]] || [[ "$depth" == "0" ]]; then
+			
+			sortdir="${sortdir}"
+			if [[ "$i" == "-" ]]; then
+				cur=$(expr $cur + 1)
+				sortdir="${sortdir}/"
+			else
+				if [[ "$sortdir" != */ ]]; then
+					sortdir="${sortdir} $i"
+				else
+					sortdir="${sortdir}$i"
+				fi	
+			fi
+		fi
+	done
+	if [[ "$sortdir" != */ ]]; then sortdir="${sortdir}/"; fi
+	
+	#create the directory
+	if [ ! -d "$sortdir" ]; then `mkdir -p "$sortdir"`; fi
+	final="${sortdir}${basename}"
+	
+	$(mv "$file" "$final")
+	
+	if $verbose; then
+		echo "Sorted location: $final"
+	fi	
+}
 
 function processFile()
 {
@@ -103,47 +117,8 @@ function processFile()
 
 	`cp "$file" "${backup}"`
 
-	#used for sorting 
-	noext=${basename%.*}
-	if $pound; then
-		unnumbered=${noext%% \#*}
-	else
-		unnumbered=${noext%% [#0-9]**}
-	fi
-	
-	#loop through $unnumbered splitting on ' - '
-	sortdir="${basedir}/"
-	cur=0
-	for i in $(echo "$unnumbered")
-	do
-		echo "$cur"
-		if [[ "$cur" -le "$depth" ]] || [[ "$depth" == "0" ]]; then
-			cur=$(expr $cur + 1)
-			sortdir="${sortdir}"
-			if [[ "$i" == "-" ]]; then
-				sortdir="${sortdir}/"
-			else
-				if [[ "$sortdir" != */ ]]; then
-					sortdir="${sortdir} $i"
-				else
-					sortdir="${sortdir}$i"
-				fi	
-			fi
-		fi
-	done
-	sortdir="${sortdir}/"
-	echo "$sortdir"
-
-	if [ ! -d "$sortdir" ]; then
-		#echo "dir $sortdir doesnt' exists"
-		`mkdir -p "$sortdir"`
-	fi
-
     rarname="${folname}.cbr"
     zipname="${folname}.cbz"
-
-	#finished file
-	finfile="${sortdir}${basename}"
 
 	#attempt to unrar
 	`$unrar e -ad -id[c,q,p,d] "$file" "$tmpfolder" >> /dev/null`
@@ -214,8 +189,14 @@ function processFile()
 	#get series and item name
 	#test and ake dirs as needed
 
-	if $verbose; then echo "Moving ${final} to ${finfile}"; fi
-	$(mv "$final" "$finfile")
+	if $sort; then
+		sortFile "$final"
+	else
+		#otherwise just keeps it's location the same
+		$(mv "$final" "$file")
+	fi
+	
+	
 	
 	$(rm -rf "$folname")
 	$(rm -rf "$tmpfolder")
@@ -268,6 +249,7 @@ OPTIONS:
    -d <path>, --topdir  Top path to where your comics are stored [Default: ~/Comics]
    -b <path>, --backup  Path to backup original file to. [Default: ~/Comics/Backup]
    --level, -l #        Depth level of folder structure created, use 0 for infinite. [Default: 2]
+   --nosort, -S         Don't sort the file
    --numbers, -n        Don't use # in parsing just use the last number in the filename                
    --nonrecursive, -N   Does not recurse into subdirectories. This option is ignored if <item> is a file
    --interactive, -i    Interactive mode, will open folders and give you a pause to modify the files
@@ -318,7 +300,13 @@ verbose=false
 pound=true
 logfile="$(basename ${0%.*}).log"
 depth=2
+sort=true
 
+
+#
+#
+#   command line option parseing
+#
 while [ "$1" != "" ]; do
     case $1 in
 		-d )					shift
@@ -332,6 +320,7 @@ while [ "$1" != "" ]; do
 		-q | --quiet )			quiet=true;;
         -i | --interactive )    interactive=true;;
 		-n | --numbers )        pound=false;;
+		-S | --nosort )			sort=false;;
         -h | --help )           usage
                                 exit
                                 ;;

@@ -2,6 +2,7 @@ CHANGELOG
 v1.4
 	- 'infinite' depth to the folders each section between a - is made into a folder 
 	- depth level of folder structure defaults to 2
+	- toggle for turning off sorting
 v1.3 
 	- added -#, --numbers toggle for determining whether issues numbers are preceded by a # or not (default assumes they are)
 	- fixed a bug in single issue processing putting the tmp directory in the wrong place which could cause errors
@@ -14,9 +15,7 @@ TO DO
 - option for not keeping a backup
 - option for automode (quiet, no backup, recursive)
 - option for superquiet mode (no output no logging)
-- option to turn off sorting
 - option to only sort
-- split sorting off to its own function
 - option for not setting the icon
 - specify your own regular expression for sorting
 - linux support
