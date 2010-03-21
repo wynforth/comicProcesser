@@ -267,8 +267,8 @@ OPTIONS:
    -h, --help           Show this message
    -d <path>, --topdir  Top path to where your comics are stored [Default: ~/Comics]
    -b <path>, --backup  Path to backup original file to. [Default: ~/Comics/Backup]
-   --level, -l #        Depth level of folder structure created default 2, use 0 for infinate.
-   --numbers, -n        Don't use # in parseing just use the last number in the filename                
+   --level, -l #        Depth level of folder structure created, use 0 for infinite. [Default: 2]
+   --numbers, -n        Don't use # in parsing just use the last number in the filename                
    --nonrecursive, -N   Does not recurse into subdirectories. This option is ignored if <item> is a file
    --interactive, -i    Interactive mode, will open folders and give you a pause to modify the files
    --verbose, -v        Verbose
