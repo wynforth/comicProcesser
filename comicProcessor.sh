@@ -19,14 +19,16 @@ zip=$(which zip)
 rar=$(which rar)
 stat=$(which stat)
 seticon=$(which seticon)
-if [ -z "$seticon" ]; then
-	echo "Could not locate seticon in $PATH. It is part of OSX Utils and found at http://www.sveinbjorn.org/osxutils_docs"
-	echo "The script will continue however icons may not be properly created."
-	seticon="/usr/local/bin/seticon"
-fi
-if [ -z "$sips" ]; then
-	echo "Can not locate sips in $PATH."
-	echo "The script will continue however icons may not be properly created."
+if [ "$platform" = "OSX" ]; then
+	if [ -z "$seticon" ]; then
+		echo "Could not locate seticon in $PATH. It is part of OSX Utils and found at http://www.sveinbjorn.org/osxutils_docs"
+		echo "The script will continue however icons may not be properly created."
+		seticon="/usr/local/bin/seticon"
+	fi
+	if [ -z "$sips" ]; then
+		echo "Can not locate sips in $PATH."
+		echo "The script will continue however icons may not be properly created."
+	fi
 fi
 if [ -z "$unrar" ]; then
 	echo "Can not locate unrar in $PATH. This can be installed through mac ports"
@@ -158,7 +160,7 @@ processFile()
 		origsize=$($stat -f %z "$file")
 		zipsize=$($stat -f %z "$zipname")
 		rarsize=$($stat -f %z "$rarname")
-	elif [ "$platform" = "Linux" ]
+	elif [ "$platform" = "Linux" ]; then
 		origsize=$($stat -c %s "$file")
 		zipsize=$($stat -c %s "$zipname")
 		rarsize=$($stat -c %s "$rarname")
@@ -193,10 +195,12 @@ processFile()
 		echo "${basename} - Saved $saved Mb"
 	fi
 
-	#set icon
-	image=`ls "$folname" | grep  -m1 -i -e "jpg\|gif\|png"`
-	`$sips -i "$folname/$image" >> /dev/null`
-	`$seticon "$folname/$image" "$final"`
+	#set icon only needed for osx
+	if [ "$platform" = "OSX" ]; then
+		image=`ls "$folname" | grep  -m1 -i -e "jpg\|gif\|png"`
+		`$sips -i "$folname/$image" >> /dev/null`
+		`$seticon "$folname/$image" "$final"`
+	fi
 
 	#get series and item name
 	#test and ake dirs as needed
