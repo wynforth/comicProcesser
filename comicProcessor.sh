@@ -49,7 +49,7 @@ if $quit; then
 	exit
 fi
 
-function sortFile()
+sortFile()
 {
 	file=$1
 	basename=$(basename "$file") #filename
@@ -95,7 +95,7 @@ function sortFile()
 	fi	
 }
 
-function processFile()
+processFile()
 {
 	file="$1"
 	echo "${tab}processing $file"
@@ -202,22 +202,23 @@ function processFile()
 	$(rm -rf "$tmpfolder")
 }
 
-function processDir()
+processDir()
 {
 	cd "$1"
 	tab="$tab  "
 	for file in *; do
 		if [ -d "$file" ]; then
-			
-			if $recurse; then 
-				if $interactive; then
-					read -p "Process folder $file? [y]/n : " skip
-					if [[ "$skip" == "n" ]] || [[ "$skip" == "N" ]]; then
-						continue;
+			if [[ "$file" != "Backups" ]]; then
+				if $recurse; then 
+					if $interactive; then
+						read -p "Process folder $file? [y]/n : " skip
+						if [[ "$skip" == "n" ]] || [[ "$skip" == "N" ]]; then
+							continue;
+						fi
 					fi
+					if $verbose; then echo "${tab}Processing: $file as directory"; fi
+					processDir "$file"
 				fi
-				if $verbose; then echo "${tab}Processing: $file as directory"; fi
-				processDir "$file"
 			fi
 		elif [ -s "$file" ]; then
 			processFile "$file"
@@ -227,7 +228,7 @@ function processDir()
 	tab="${tab%  }"
 }
 
-function usage
+usage()
 {
 	
 echo "usage: $0 [-opts] <item>
@@ -261,14 +262,14 @@ INTERACTIVE MODE:
 "
 }
 
-function folderState
+folderState()
 {
 	echo "Backup Directory: $backup"
 	echo "Base Directory:   $basedir"
 	recursiveState
 	interactiveState
 }
-function recursiveState
+recursiveState()
 {
 	if $recurse; then
 		echo "Recursing subdirectories"
@@ -276,7 +277,7 @@ function recursiveState
 		echo "Not recursing subdirectories"
 	fi
 }
-function interactiveState
+interactiveState()
 {
 	if $interactive; then
 		echo "interactive mode is on"
