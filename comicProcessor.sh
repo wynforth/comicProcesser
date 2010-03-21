@@ -1,5 +1,6 @@
 #! /bin/bash
 
+#echo "$SHELL"
 #determine OS version, needed for some checks
 
 os=$(uname)
@@ -8,7 +9,7 @@ case $os in
 	Linux ) platform="Linux";;
 esac
 
-echo "$platform"
+#echo "$platform"
 
 #requirement testing
 quit=false
@@ -89,7 +90,7 @@ sortFile()
 			fi
 		fi
 	done
-	if [ "$sortdir" != */ ]; then sortdir="${sortdir}/"; fi
+	if [[ "$sortdir" != */ ]]; then sortdir="${sortdir}/"; fi
 	
 	#create the directory
 	if [ ! -d "$sortdir" ]; then `mkdir -p "$sortdir"`; fi
@@ -139,7 +140,13 @@ processFile()
 		exit 1
 	fi
 	
-	if $interactive; then 
+	if [ "$platform" = "OSX" ]; then
+		origsize=$($stat -f %z "$file")
+	elif [ "$platform" = "Linux" ]; then
+		origsize=$($stat -c %s "$file")
+	fi
+	
+	if $interactive  || [[ "$origsize" -gt "$isize" ]]; then 
 		`open "${folname}"`
 		read -p "Skip processing of this file? y/[n] : " skip
 		if [ "$skip" == "Y" ] || [ "$skip" == "y" ]; then
@@ -157,11 +164,9 @@ processFile()
 
 	#get file sizes
 	if [ "$platform" = "OSX" ]; then
-		origsize=$($stat -f %z "$file")
 		zipsize=$($stat -f %z "$zipname")
 		rarsize=$($stat -f %z "$rarname")
 	elif [ "$platform" = "Linux" ]; then
-		origsize=$($stat -c %s "$file")
 		zipsize=$($stat -c %s "$zipname")
 		rarsize=$($stat -c %s "$rarname")
 	fi
@@ -226,7 +231,7 @@ processDir()
 		if [ -d "$file" ]; then
 			if [ "$file" != "Backups" ]; then
 				if $recurse; then 
-					if $interactive; then
+					if $interactive && [[ "$isize" -ne "0" ]]; then
 						read -p "Process folder $file? [y]/n : " skip
 						if [ "$skip" == "n" ] || [ "$skip" == "N" ]; then
 							continue;
@@ -270,6 +275,7 @@ OPTIONS:
    --numbers, -n        Don't use # in parsing just use the last number in the filename                
    --nonrecursive, -N   Does not recurse into subdirectories. This option is ignored if <item> is a file
    --interactive, -i    Interactive mode, will open folders and give you a pause to modify the files
+   -li #                Limited interactive, likr interactive mode but only on files larger then specified in MB 
    --verbose, -v        Verbose
    --quiet, -q          Output is redirected a log file: $(basename ${0%.*}).log. Can not be used with interactive mode
 
@@ -318,6 +324,7 @@ pound=true
 logfile="$(basename ${0%.*}).log"
 depth=2
 sort=true
+isize=0
 
 
 #
@@ -343,6 +350,10 @@ while [ "$1" != "" ]; do
                                 ;;
 		-l | --level )			shift
 								depth=$1
+								;;
+		-li )					shift
+								isize=$(expr "$1" \* 1024)
+								isize=$(expr "$isize" \* 1024)
 								;;
         * )						if [ -z "$2" ]; then
 									item="$1"
