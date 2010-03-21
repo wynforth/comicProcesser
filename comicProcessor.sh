@@ -67,14 +67,14 @@ sortFile()
 	#loop through $unnumbered splitting on ' - '
 	for i in $(echo "$unnumbered")
 	do
-		if [[ "$cur" -lt "$depth" ]] || [[ "$depth" == "0" ]]; then
+		if [ "$cur" -lt "$depth" ] || [ "$depth" == "0" ]; then
 			
 			sortdir="${sortdir}"
-			if [[ "$i" == "-" ]]; then
+			if [ "$i" == "-" ]; then
 				cur=$(expr $cur + 1)
 				sortdir="${sortdir}/"
 			else
-				if [[ "$sortdir" != */ ]]; then
+				if [ "$sortdir" != */ ]; then
 					sortdir="${sortdir} $i"
 				else
 					sortdir="${sortdir}$i"
@@ -82,7 +82,7 @@ sortFile()
 			fi
 		fi
 	done
-	if [[ "$sortdir" != */ ]]; then sortdir="${sortdir}/"; fi
+	if [ "$sortdir" != */ ]; then sortdir="${sortdir}/"; fi
 	
 	#create the directory
 	if [ ! -d "$sortdir" ]; then `mkdir -p "$sortdir"`; fi
@@ -135,7 +135,7 @@ processFile()
 	if $interactive; then 
 		`open "${folname}"`
 		read -p "Skip processing of this file? y/[n] : " skip
-		if [[ "$skip" == "Y" ]] || [[ "$skip" == "y" ]]; then
+		if [ "$skip" == "Y" ] || [ "$skip" == "y" ]; then
 			`rm -rf "$tmpfolder"`
 			return
 		fi
@@ -208,11 +208,11 @@ processDir()
 	tab="$tab  "
 	for file in *; do
 		if [ -d "$file" ]; then
-			if [[ "$file" != "Backups" ]]; then
+			if [ "$file" != "Backups" ]; then
 				if $recurse; then 
 					if $interactive; then
 						read -p "Process folder $file? [y]/n : " skip
-						if [[ "$skip" == "n" ]] || [[ "$skip" == "N" ]]; then
+						if [ "$skip" == "n" ] || [ "$skip" == "N" ]; then
 							continue;
 						fi
 					fi
@@ -338,7 +338,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-if [[ -z "$item" ]]; then
+if [ -z "$item" ]; then
 	usage
 	exit 1
 fi
@@ -349,7 +349,7 @@ if $interactive; then quiet=false; fi
 if $quiet; then	exec 1>$logfile; fi
 
 #convert relative path to absolute path for output
-if [[ ! "$backup" = /* ]]; then
+if [ ! "$backup" = /* ]; then
 	backup="$(pwd)/$backup"
 fi
 
@@ -357,23 +357,23 @@ fi
 backup=${backup%/}
 basedir=${basedir%/}
 
-if [[ ! -d "$backup" ]]; then
+if [ ! -d "$backup" ]; then
 	if $verbose; then echo "Attempting to create backup directory: $backup"; fi
 	result=$(mkdir -p "$backup" 2>&1)
-	if [[ ! -d "$backup" ]]; then
+	if [ ! -d "$backup" ]; then
 		if $verbose; then echo "$result"; fi
 		echo "Couldn't create backup directory. Script stopping to prevent dataloss"
 		exit 1
 	fi
 fi
 
-if [[ -d "$item" ]]; then
+if [ -d "$item" ]; then
 	if $verbose; then folderState; fi
 	echo "Processing: \"$item\" as a directory"
 	processDir "$item"
-elif [[ -s "$item" ]]; then
+elif [ -s "$item" ]; then
 	nonrecursive=1
- 	if [[ "$verbose" == 1 ]]; then folderState; fi
+ 	if [ "$verbose" == 1 ]; then folderState; fi
 	curdir="$(pwd)"
 	cd "$(dirname "$item")"
 	processFile "$item"
