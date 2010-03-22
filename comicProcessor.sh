@@ -70,8 +70,15 @@ sortFile()
 		unnumbered=${noext%% [#0-9]**}
 	fi
 	
+	#if there is no numer it should drop directly level by one. unless that woudl reduce the depth to none
+	if [[ "$noext" == "$unnumbered" ]]; then
+		cur=1
+	else
+		cur=0
+	fi
+	
 	sortdir="${basedir}/"
-	cur=0
+	
 	#loop through $unnumbered splitting on ' - '
 	for i in $(echo "$unnumbered")
 	do
@@ -106,7 +113,7 @@ sortFile()
 processFile()
 {
 	file="$1"
-	echo "${tab}processing $file"
+	
 	#return
 	
 	#tmpfolder="${basedir}Unread/Sort/Work" #temp dir used for processing in
@@ -124,91 +131,100 @@ processFile()
 	folname="${tmpfolder}/${basename%.*}" #folder from file without extension
 
 	`cp "$file" "${backup}"`
+	final=$file
+	if $process; then
+		
+		echo "${tab}processing $file"
 
-    rarname="${folname}.cbr"
-    zipname="${folname}.cbz"
+	    rarname="${folname}.cbr"
+	    zipname="${folname}.cbz"
 
-	#attempt to unrar
-	`$unrar e -ad -id[c,q,p,d] "$file" "$tmpfolder" >> /dev/null`
+		#attempt to unrar
+		`$unrar e -ad -id[c,q,p,d] "$file" "$tmpfolder" >> /dev/null`
 
-	#if rar didn't work
-	if [ ! -d "$folname" ]; then
-		`$unzip -jq "$file" -d "$folname"`
-	fi
-	#if the folder still isn't there exit
-	if [ ! -d "$folname" ]; then
-		exit 1
-	fi
-	
-	if [ "$platform" = "OSX" ]; then
-		origsize=$($stat -f %z "$file")
-	elif [ "$platform" = "Linux" ]; then
-		origsize=$($stat -c %s "$file")
-	fi
-	
-	if $interactive  || [[ "$origsize" -gt "$isize" ]]; then 
-		`open "${folname}"`
-		read -p "Skip processing of this file? y/[n] : " skip
-		if [ "$skip" == "Y" ] || [ "$skip" == "y" ]; then
-			`rm -rf "$tmpfolder"`
-			return
+		#if rar didn't work
+		if [ ! -d "$folname" ]; then
+			`$unzip -jq "$file" -d "$folname"`
 		fi
-	fi
+		#if the folder still isn't there exit
+		if [ ! -d "$folname" ]; then
+			exit 1
+		fi
 	
+		if [ "$platform" = "OSX" ]; then
+			origsize=$($stat -f %z "$file")
+		elif [ "$platform" = "Linux" ]; then
+			origsize=$($stat -c %s "$file")
+		fi
+	
+		if $interactive  && [[ "$origsize" -gt "$isize" ]]; then 
+			`open "${folname}"`
+			read -p "Skip processing of this file? y/[n] : " skip
+			if [ "$skip" == "Y" ] || [ "$skip" == "y" ]; then
+				`rm -rf "$tmpfolder"`
+				return
+			fi
+		fi
+	
+	
+	
+	
+		#backup current to tempname, create a rar and zip file of it
+	     		#`cp "$file" "$tempname"`
 
-	#backup current to tempname, create a rar and zip file of it
-     		#`cp "$file" "$tempname"`
+	    `$zip -jqr9x*.DS_Store "${zipname}" "${folname}"` 
+	    `$rar a -ep -m5 -x*.DS_Store -id[c,q,p,d] "${rarname}" "${folname}"`
 
-    `$zip -jqr9x*.DS_Store "${zipname}" "${folname}"` 
-    `$rar a -ep -m5 -x*.DS_Store -id[c,q,p,d] "${rarname}" "${folname}"`
-
-	#get file sizes
-	if [ "$platform" = "OSX" ]; then
-		zipsize=$($stat -f %z "$zipname")
-		rarsize=$($stat -f %z "$rarname")
-	elif [ "$platform" = "Linux" ]; then
-		zipsize=$($stat -c %s "$zipname")
-		rarsize=$($stat -c %s "$rarname")
-	fi
+		#get file sizes
+		if [ "$platform" = "OSX" ]; then
+			zipsize=$($stat -f %z "$zipname")
+			rarsize=$($stat -f %z "$rarname")
+		elif [ "$platform" = "Linux" ]; then
+			zipsize=$($stat -c %s "$zipname")
+			rarsize=$($stat -c %s "$rarname")
+		fi
 		
 		
-	#echo $origsize
-	if [ $zipsize -ge $rarsize ]; then
-		final=$rarname
-		finalsize=$rarsize
-		`rm "$zipname"`
-	else
-		final=$zipname
-		finalsize=$zipsize
-		`rm "$rarname"`
-	fi
-
-	if [ $origsize -le $finalsize ]; then
-		`rm "$final"`
-		#mv "$file" "${tmpfolder}/"`
-		final=$file
-		if $verbose; then 
-			echo "Using original file"
+		#echo $origsize
+		if [ $zipsize -ge $rarsize ]; then
+			final=$rarname
+			finalsize=$rarsize
+			`rm "$zipname"`
+		else
+			final=$zipname
+			finalsize=$zipsize
+			`rm "$rarname"`
 		fi
-	else
-		$(rm "$file")
-	fi
-	
-	if $verbose; then
-		size=$(expr $origsize - $finalsize)
-		saved=$(echo "scale=2;$size / 1048576" | bc -l)
-		echo "${basename} - Saved $saved Mb"
-	fi
 
-	#set icon only needed for osx
-	if [ "$platform" = "OSX" ]; then
-		image=`ls "$folname" | grep  -m1 -i -e "jpg\|gif\|png"`
-		`$sips -i "$folname/$image" >> /dev/null`
-		`$seticon "$folname/$image" "$final"`
+		if [ $origsize -le $finalsize ]; then
+			`rm "$final"`
+			#mv "$file" "${tmpfolder}/"`
+			final=$file
+			if $verbose; then 
+				echo "Using original file"
+			fi
+		else
+			$(rm "$file")
+		fi
+	
+		if $verbose; then
+			size=$(expr $origsize - $finalsize)
+			saved=$(echo "scale=2;$size / 1048576" | bc -l)
+			echo "${basename} - Saved $saved Mb"
+		fi
+
+		#set icon only needed for osx
+		if [ "$platform" = "OSX" ]; then
+			image=`ls "$folname" | grep  -m1 -i -e "jpg\|gif\|png\|bmp"`
+			`$sips -i "$folname/$image" >> /dev/null`
+			`$seticon "$folname/$image" "$final"`
+		fi
 	fi
 
 	#get series and item name
 	#test and ake dirs as needed
+
+
 
 	if $sort; then
 		sortFile "$final"
@@ -219,9 +235,10 @@ processFile()
 	
 	
 	
-	$(rm -rf "$folname")
+	#$(rm -rf "$folname")
 	$(rm -rf "$tmpfolder")
 }
+
 
 processDir()
 {
@@ -272,6 +289,7 @@ OPTIONS:
    -b <path>, --backup  Path to backup original file to. [Default: ~/Comics/Backup]
    --level, -l #        Depth level of folder structure created, use 0 for infinite. [Default: 2]
    --nosort, -S         Don't sort the file
+   --noprocess, -P      Don't process the files only sort them.
    --numbers, -n        Don't use # in parsing just use the last number in the filename                
    --nonrecursive, -N   Does not recurse into subdirectories. This option is ignored if <item> is a file
    --interactive, -i    Interactive mode, will open folders and give you a pause to modify the files
@@ -325,6 +343,7 @@ logfile="$(basename ${0%.*}).log"
 depth=2
 sort=true
 isize=0
+process=true
 
 
 #
@@ -345,11 +364,13 @@ while [ "$1" != "" ]; do
         -i | --interactive )    interactive=true;;
 		-n | --numbers )        pound=false;;
 		-S | --nosort )			sort=false;;
+		-P | --noprocess )      process=false;;
         -h | --help )           usage
                                 exit
                                 ;;
 		-l | --level )			shift
 								depth=$1
+								interactive=true
 								;;
 		-li )					shift
 								isize=$(expr "$1" \* 1024)
