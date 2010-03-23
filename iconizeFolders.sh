@@ -18,6 +18,7 @@ $0 [opts] dir icons
 	
 OPTIONS:
 	-R, --nonrecursive     Will not recurse subdirectories
+	-bg					   Set a folder background image if found (only works on OSX)
 	-v, --verbose          Displays extra output" 
 	
 }
@@ -36,12 +37,12 @@ processDir()
 		if [[ -d "$item" ]]; then
 			cur="$(pwd)/$item"
 			cur="${cur:$baselen}"
-			iconname="${cur//\// - }"
+			cur="${cur//\// - }"
 			#if $verbose; then echo "Processing: $item"; fi
 			if [[ "$os" = "Darwin" ]]; then
-				iconname="${iconname}.icns"
+				iconname="${cur}.icns"
 			else
-				iconname="${iconname}.ico"
+				iconname="${cur}.ico"
 			fi
 			
 			#echo "$icondir/$iconname"
@@ -56,6 +57,7 @@ processDir()
 			fi
 			
 			if [[ -n "$ficon" ]]; then
+				echo "Setting icon for: $item"
 				if $verbose; then echo "Setting icon for \"$item\" to \"$ficon\""; fi
 				if [[ "$os" = "Darwin" ]]; then
 					$(seticon -d "$ficon" "$item")
@@ -66,6 +68,27 @@ processDir()
 				echo "Couldn't find icon for \"$cur\""
 			fi
 			
+			#if under OSX also set folder backgrounds...yeah i'm a bit crazy
+			#runs an applescript to set the folderBG
+			#need to build a toggle for this
+			if $setbg; then
+				if [[ "$os" = "Darwin" ]]; then
+					echo "Setting folder background for: $item"
+					fullitem="$(pwd)/$item"
+				
+					background="$icondir/bg/$cur.jpg"
+					if [[ -s "$background" ]]; then
+
+						eval "osascript \"$scriptDir/setFolderBackground.scpt\" \"$fullitem\" \"$background\" >> /dev/null"
+					else
+						#if jpg doesn't work try png
+						background="$icondir/bg/$cur.png"
+						if [[ -s "$background" ]]; then
+							eval "osascript \"$scriptDir/setFolderBackground.scpt\" \"$fullitem\" \"$background\" >> /dev/null"
+						fi
+					fi	
+				fi
+			fi
 			
 			if $recurse; then
 				processDir "$item"
@@ -85,11 +108,13 @@ processDir()
 
 recurse=true;
 verbose=false;
+setbg=false
 
 while [ "$1" != "" ]; do
     case $1 in
         -R | --nonrecursive )		recurse=false;;
 		-v | --verbose )    		verbose=true;;
+		-bg )						setbg=true;;
         * )							if [[ -z "$3" ]]; then
 										basedir="$1"
 										shift
@@ -122,7 +147,7 @@ fi
 
 if [[ "$basedir" = */ ]]; then basedir=${basedir%/}; fi
 if [[ "$icondir" = */ ]]; then icondir=${icondir%/}; fi
-
+scriptDir=$(pwd)
 seticon=$(which seticon)
 if [ -z "$seticon" ]; then
 	echo "Could not locate seticon in $PATH. It is part of OSX Utils and found at http://www.sveinbjorn.org/osxutils_docs"
