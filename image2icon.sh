@@ -20,6 +20,7 @@ OPTIONS:
 	-P, --nopng   Will not retain the png file
 	-W, --noico   Will not create an ico file
 	-M, --noicns  Will not create an icns file
+	-f, --force   Force overwriting of icons, otherwise it will only process new images
 	-a, --all     Will create a 512x512 icon as part of the OSX icns file.
 	-v, --verbose I hope we all know what this option does by now
 			
@@ -47,6 +48,7 @@ icns=true
 fullrange=false
 icnsloc=$(which png2icns)
 verbose=false
+force=false
 if [[ -z "$icnsloc" ]]; then icns=false; fi
 
 while [ "$1" != "" ]; do
@@ -56,6 +58,7 @@ while [ "$1" != "" ]; do
 		-W | --noico )		ico=false;;
         -M | --noicns )		icns=false;;
 		-v | --verbose )    verbose=true;;
+		-f | --force )		force=true;;
         * )					if [ -z "$3" ]; then
 								dir="$1"
 								shift
@@ -68,23 +71,27 @@ while [ "$1" != "" ]; do
     shift
 done
 
-echo "$dir"
 if [[ -z "$dir" ]]; then
 	usage
 	exit 1
 fi
 
+#script directory
+path=$(pwd)
+
 if [[ "$outbase" != */ ]] && [[ -n "$outbase" ]]; then
 	outbase="${outbase}/"
 fi
+outbase=$(cd "$outbase"; pwd)
+
 
 if [[ -d "$dir" ]]; then
-	path=$(pwd)
+
 	tmpdir="${path}/tmp"
 	#files go in their respective folders
-	outdir="${outbase}png"
-	outico="${outbase}ico"
-	outicns="${outbase}icns"
+	outdir="${outbase}/png"
+	outico="${outbase}/ico"
+	outicns="${outbase}/icns"
 	
 
 	cd "$dir"
@@ -107,6 +114,12 @@ if [[ -d "$dir" ]]; then
 		if $verbose; then echo "Storing png files in: $(pwd)/${outdir}"; fi
 	fi
 
+	if $force; then
+		if $verbose; then
+			echo "Forceing creation of files."
+		fi
+	fi
+	
 	#it needs this regardless
 	
 
@@ -116,15 +129,24 @@ if [[ -d "$dir" ]]; then
 		if [[ -s "$file" ]] && [[ ! -d "$file" ]]; then
 			basename=$(basename "$file")
 			filename=${basename%.*}
+			
+			
+			if ! $force; then
+				if [[ -s "$outicns/$filename.icns" ]] && [[ -s "$outico/$filename.ico" ]] && [[ -s "$outdir/$filename.png" ]]; then
+					echo "$basename already processed skipping."
+					continue
+				fi
+			fi
+			
 			echo "Processing: $basename"
 			
 			#crweate the temp dir
 			if [[ -d "$tmpdir" ]]; then $(rm -rf "$tmpdir"); fi
 			$(mkdir -p "$tmpdir")
+			
 			#directory=$(dirname "$file")
 			outfile="$tmpdir/${filename}.png"
 					
-			
 			$(convert "$file" -resize 512 -extent 512x512+0-132 "$path/templateImage.tga" -compose copy-opacity -composite "$path/templateFolder.tga" -compose dst-over -composite "$outfile")
 			
 		

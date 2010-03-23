@@ -72,8 +72,8 @@ sortFile()
 	
 	#if there is no number it should drop directly level by one. unless that woudl reduce the depth to none
 	
+	sortdir=""
 	cur=0
-	sortdir="${basedir}/"
 	
 	#loop through $unnumbered splitting on ' - '
 	for i in $(echo "$unnumbered")
@@ -85,25 +85,40 @@ sortFile()
 				cur=$(expr $cur + 1)
 				sortdir="${sortdir}/"
 			else
-				if [[ "$sortdir" != */ ]]; then
+				if [[ "$sortdir" != */ ]] && [[ -n "$sortdir" ]]; then
 					sortdir="${sortdir} $i"
 				else
 					sortdir="${sortdir}$i"
 				fi	
 			fi
 		fi
+		#special sorting for dated directories of a single depth
+		#this is to keep the files into their series folder without needing extra file names
+		#X-Men (2005).cbz vs X-Men - X-Men (2005).cbz
+		if [[ "$cur" -eq "0" ]] && [[ "$sortdir" = *\(* ]]; then
+			sortdir="${sortdir% \(*}/$sortdir"
+		fi
 	done
 	
+	
+	#special sorting for unnumbered files
 	if [[ "$noext" = "$unnumbered" ]]; then
 		#remove the last entry if there is no number
 		shortdir="${sortdir%/*}"
-		if [[ ! "$shortdir" = "${basedir}" ]]; then
+		#echo "$sortdir - $shortdir"
+		if [[ -n "$shortdir" ]]; then
 			sortdir="$shortdir"
 		fi
 	fi
+	
+
+	
+	
+	
+	sortdir="${basedir}/${sortdir}"
 	if [[ "$sortdir" != */ ]]; then sortdir="${sortdir}/"; fi
 		
-	echo "$sortdir"
+	#echo "$sortdir"
 	
 	#create the directory
 	if [ ! -d "$sortdir" ]; then `mkdir -p "$sortdir"`; fi
@@ -133,99 +148,93 @@ processFile()
 	#echo $tmpfolder
 	
 	basename=$(basename "$file") #filename
-	
 	folname="${tmpfolder}/${basename%.*}" #folder from file without extension
 
-	`cp "$file" "${backup}"`
 	final=$file
-	if $process; then
-		
-		echo "${tab}processing $file"
-
-	    rarname="${folname}.cbr"
-	    zipname="${folname}.cbz"
-
-		#attempt to unrar
-		`$unrar e -ad -id[c,q,p,d] "$file" "$tmpfolder" >> /dev/null`
-
-		#if rar didn't work
-		if [ ! -d "$folname" ]; then
-			`$unzip -jq "$file" -d "$folname"`
-		fi
-		#if the folder still isn't there exit
-		if [ ! -d "$folname" ]; then
-			exit 1
-		fi
 	
-		if [ "$platform" = "OSX" ]; then
-			origsize=$($stat -f %z "$file")
-		elif [ "$platform" = "Linux" ]; then
-			origsize=$($stat -c %s "$file")
-		fi
-	
-		if $interactive  && [[ "$origsize" -gt "$isize" ]]; then 
-			`open "${folname}"`
-			read -p "Skip processing of this file? y/[n] : " skip
-			if [ "$skip" == "Y" ] || [ "$skip" == "y" ]; then
-				`rm -rf "$tmpfolder"`
-				return
-			fi
-		fi
-	
-	
-	
-	
-		#backup current to tempname, create a rar and zip file of it
-	     		#`cp "$file" "$tempname"`
+	echo "${tab}processing $file"
 
-	    `$zip -jqr9x*.DS_Store "${zipname}" "${folname}"` 
-	    `$rar a -ep -m5 -x*.DS_Store -id[c,q,p,d] "${rarname}" "${folname}"`
+    rarname="${folname}.cbr"
+    zipname="${folname}.cbz"
 
-		#get file sizes
-		if [ "$platform" = "OSX" ]; then
-			zipsize=$($stat -f %z "$zipname")
-			rarsize=$($stat -f %z "$rarname")
-		elif [ "$platform" = "Linux" ]; then
-			zipsize=$($stat -c %s "$zipname")
-			rarsize=$($stat -c %s "$rarname")
-		fi
-		
-		
-		#echo $origsize
-		if [ $zipsize -ge $rarsize ]; then
-			final=$rarname
-			finalsize=$rarsize
-			`rm "$zipname"`
-		else
-			final=$zipname
-			finalsize=$zipsize
-			`rm "$rarname"`
-		fi
+	#attempt to unrar
+	`$unrar e -ad -id[c,q,p,d] "$file" "$tmpfolder" >> /dev/null`
 
-		if [ $origsize -le $finalsize ]; then
-			`rm "$final"`
-			#mv "$file" "${tmpfolder}/"`
-			final=$file
-			if $verbose; then 
-				echo "Using original file"
-			fi
-		else
-			$(rm "$file")
-		fi
-	
-		if $verbose; then
-			size=$(expr $origsize - $finalsize)
-			saved=$(echo "scale=2;$size / 1048576" | bc -l)
-			echo "${basename} - Saved $saved Mb"
-		fi
+	#if rar didn't work
+	if [ ! -d "$folname" ]; then
+		`$unzip -jq "$file" -d "$folname"`
+	fi
+	#if the folder still isn't there exit
+	if [ ! -d "$folname" ]; then
+		exit 1
+	fi
 
-		#set icon only needed for osx
-		if [ "$platform" = "OSX" ]; then
-			image=`ls "$folname" | grep  -m1 -i -e "jpg\|gif\|png\|bmp"`
-			`$sips -i "$folname/$image" >> /dev/null`
-			`$seticon "$folname/$image" "$final"`
+	if [ "$platform" = "OSX" ]; then
+		origsize=$($stat -f %z "$file")
+	elif [ "$platform" = "Linux" ]; then
+		origsize=$($stat -c %s "$file")
+	fi
+
+	if $interactive && [[ "$origsize" -gt "$isize" ]]; then 
+		`open "${folname}"`
+		read -p "Skip processing of this file? y/[n] : " skip
+		if [ "$skip" == "Y" ] || [ "$skip" == "y" ]; then
+			`rm -rf "$tmpfolder"`
+			return
 		fi
 	fi
+	
+	#backup current to tempname, create a rar and zip file of it
+     		#`cp "$file" "$tempname"`
+
+    `$zip -jqr9x*.DS_Store "${zipname}" "${folname}"` 
+    `$rar a -ep -m5 -x*.DS_Store -id[c,q,p,d] "${rarname}" "${folname}"`
+
+	#get file sizes
+	if [ "$platform" = "OSX" ]; then
+		zipsize=$($stat -f %z "$zipname")
+		rarsize=$($stat -f %z "$rarname")
+	elif [ "$platform" = "Linux" ]; then
+		zipsize=$($stat -c %s "$zipname")
+		rarsize=$($stat -c %s "$rarname")
+	fi
+	
+	
+	#echo $origsize
+	if [ $zipsize -ge $rarsize ]; then
+		final=$rarname
+		finalsize=$rarsize
+		`rm "$zipname"`
+	else
+		final=$zipname
+		finalsize=$zipsize
+		`rm "$rarname"`
+	fi
+
+	if [ $origsize -le $finalsize ]; then
+		`rm "$final"`
+		#mv "$file" "${tmpfolder}/"`
+		final=$file
+		if $verbose; then 
+			echo "Using original file"
+		fi
+	else
+		$(rm "$file")
+	fi
+
+	if $verbose; then
+		size=$(expr $origsize - $finalsize)
+		saved=$(echo "scale=2;$size / 1048576" | bc -l)
+		echo "${basename} - Saved $saved Mb"
+	fi
+
+	#set icon only needed for osx
+	if [ "$platform" = "OSX" ]; then
+		image=$(ls "$folname" | grep  -m1 -i -e "jpg\|gif\|png\|bmp")
+		eval "sips -i \"$folname/$image\" >> /dev/null"
+		`$seticon "$folname/$image" "$final"`
+	fi
+
 
 	#get series and item name
 	#test and ake dirs as needed
@@ -265,7 +274,14 @@ processDir()
 				fi
 			fi
 		elif [ -s "$file" ]; then
-			processFile "$file"
+			#backup file
+			if $makebackup; then `cp "$file" "${backup}"`; fi
+			#process file
+			if $process; then 
+				processFile "$file"
+			elif $sort; then #processing includes sorting so only run this if the file wasn't processed
+				sortFile "$file"
+			fi
 		fi
 	done
 	cd ".."
@@ -295,6 +311,8 @@ OPTIONS:
    -b <path>, --backup  Path to backup original file to. [Default: ~/Comics/Backup]
    --level, -l #        Depth level of folder structure created, use 0 for infinite. [Default: 2]
    --nosort, -S         Don't sort the file
+   --sortonly, -s       Only sort don't worry about processing, or setting an icon. still makes a backup.
+   --nobackup, -B       Don't create a backup, be careful
    --noprocess, -P      Don't process the files only sort them.
    --numbers, -n        Don't use # in parsing just use the last number in the filename                
    --nonrecursive, -N   Does not recurse into subdirectories. This option is ignored if <item> is a file
@@ -350,6 +368,8 @@ depth=2
 sort=true
 isize=0
 process=true
+iconize=true
+makebackup=true
 
 
 #
@@ -364,6 +384,8 @@ while [ "$1" != "" ]; do
 		-b )					shift
 								backup=$1
 								;;
+		-B | --nobackup )       makebackup=false;;
+		-s | --sortonly )		process=false; iconize=false;;
 		-N | --nonrecursive )	recurse=false;;
 		-v | --verbose )		verbose=true;;
 		-q | --quiet )			quiet=true;;
@@ -376,11 +398,11 @@ while [ "$1" != "" ]; do
                                 ;;
 		-l | --level )			shift
 								depth=$1
-								interactive=true
 								;;
 		-li )					shift
 								isize=$(expr "$1" \* 1024)
 								isize=$(expr "$isize" \* 1024)
+								interactive=true
 								;;
         * )						if [ -z "$2" ]; then
 									item="$1"
@@ -411,13 +433,15 @@ fi
 backup=${backup%/}
 basedir=${basedir%/}
 
-if [ ! -d "$backup" ]; then
-	if $verbose; then echo "Attempting to create backup directory: $backup"; fi
-	result=$(mkdir -p "$backup" 2>&1)
+if $makebackup; then
 	if [ ! -d "$backup" ]; then
-		if $verbose; then echo "$result"; fi
-		echo "Couldn't create backup directory. Script stopping to prevent dataloss"
-		exit 1
+		if $verbose; then echo "Attempting to create backup directory: $backup"; fi
+		result=$(mkdir -p "$backup" 2>&1)
+		if [ ! -d "$backup" ]; then
+			if $verbose; then echo "$result"; fi
+			echo "Couldn't create backup directory. Script stopping to prevent dataloss"
+			exit 1
+		fi
 	fi
 fi
 
@@ -426,11 +450,20 @@ if [ -d "$item" ]; then
 	echo "Processing: \"$item\" as a directory"
 	processDir "$item"
 elif [ -s "$item" ]; then
-	nonrecursive=1
- 	if [ "$verbose" == 1 ]; then folderState; fi
+	recurse=false
+ 	if $verbose; then folderState; fi
 	curdir="$(pwd)"
+	if $makebackup; then $(cp "$item" "${backup}"); fi
 	cd "$(dirname "$item")"
-	processFile "$item"
+	
+	#process file
+	if $process; then 
+		processFile "$(basename "$item")"
+	else
+		if $sort; then #processing includes sorting so only run this if the file wasn't processed
+			sortFile "$(basename "$item")"
+		fi
+	fi
 else
 	echo "Could not process \"$item\" make sure the name is entered correctly."
 fi

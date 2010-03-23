@@ -44,6 +44,7 @@ processDir()
 				iconname="${iconname}.ico"
 			fi
 			
+			#echo "$icondir/$iconname"
 			if [[ -s "$icondir/$iconname" ]]; then
 				ficon="$icondir/$iconname"
 			elif [[ -s "$icondir/icns/$iconname" ]]; then
@@ -105,6 +106,9 @@ if [[ -z "$basedir" ]] | [[ -z "$icondir" ]]; then
 	usage
 	exit 1
 fi
+
+basedir=$(cd "$basedir"; pwd)
+icondir=$(cd "$icondir"; pwd)
 
 if [[ ! -d "$basedir" ]]; then
 	echo "$basedir could not be found"
