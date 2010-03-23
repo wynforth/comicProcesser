@@ -56,7 +56,7 @@ processDir()
 			
 			if [[ -n "$ficon" ]]; then
 				if $verbose; then echo "Setting icon for \"$item\" to \"$ficon\""; fi
-				if [[ "os" = "Darwin" ]]; then
+				if [[ "$os" = "Darwin" ]]; then
 					$(seticon -d "$ficon" "$item")
 				else
 					echo "Icon found but i don't know how to set it on this system yet"
