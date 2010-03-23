@@ -70,13 +70,9 @@ sortFile()
 		unnumbered=${noext%% [#0-9]**}
 	fi
 	
-	#if there is no numer it should drop directly level by one. unless that woudl reduce the depth to none
-	if [[ "$noext" == "$unnumbered" ]]; then
-		cur=1
-	else
-		cur=0
-	fi
+	#if there is no number it should drop directly level by one. unless that woudl reduce the depth to none
 	
+	cur=0
 	sortdir="${basedir}/"
 	
 	#loop through $unnumbered splitting on ' - '
@@ -97,7 +93,17 @@ sortFile()
 			fi
 		fi
 	done
+	
+	if [[ "$noext" = "$unnumbered" ]]; then
+		#remove the last entry if there is no number
+		shortdir="${sortdir%/*}"
+		if [[ ! "$shortdir" = "${basedir}" ]]; then
+			sortdir="$shortdir"
+		fi
+	fi
 	if [[ "$sortdir" != */ ]]; then sortdir="${sortdir}/"; fi
+		
+	echo "$sortdir"
 	
 	#create the directory
 	if [ ! -d "$sortdir" ]; then `mkdir -p "$sortdir"`; fi
