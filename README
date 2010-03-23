@@ -90,4 +90,27 @@ IMAGES:
 OUTPUT:
 	The script creates a 512x512 png file with the template applied. it will also create an ico file with icons with dimensions 256, 48, 32,24, and 16. If possible it will also create an icns file with icons with dimensions 256, 128, 32, 16
 
+######################################################################################
+
+ICONIZE FOLDER
+
+######################################################################################
+
+Applies a custom icon to a folder based on the naming scheme of the folder, depth of the folder doesn't matter. If there is no matching icon it will list out the folder so you know what you need to create icons for.
+For examples
+given:
+	basedir = ~/Comics/
+	Iconlocation = ~/Icons/
+
+for a given folder ie ~/Comics/Spider-Man/The Amazing Spider-Man/
+it will try to use the icon ~/Icons/Spider-Man - The Amazing Spider-Man.icns (or .ico for linux)
+
+iconizeFolders.sh [opts] dir icons
+
+	directory     The base directory to use, all folders in this directory will be used, it will not add an icon to this directory
+	icons		  Directory where your icons are kept. it will try the base directory, if an icon is not found it will then try a subdirectory of either icns/ or ico/
+
+OPTIONS:
+	-R, --nonrecursive     Will not recurse subdirectories
+	-v, --verbose          Displays extra output
 
