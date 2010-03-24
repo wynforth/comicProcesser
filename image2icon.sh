@@ -21,6 +21,7 @@ OPTIONS:
 	-W, --noico   Will not create an ico file
 	-M, --noicns  Will not create an icns file
 	-f, --force   Force overwriting of icons, otherwise it will only process new images
+	-l, --label   Put a label on the folder tab
 	-a, --all     Will create a 512x512 icon as part of the OSX icns file.
 	-v, --verbose I hope we all know what this option does by now
 			
@@ -49,6 +50,7 @@ fullrange=false
 icnsloc=$(which png2icns)
 verbose=false
 force=false
+label=false
 if [[ -z "$icnsloc" ]]; then icns=false; fi
 
 while [ "$1" != "" ]; do
@@ -59,6 +61,7 @@ while [ "$1" != "" ]; do
         -M | --noicns )		icns=false;;
 		-v | --verbose )    verbose=true;;
 		-f | --force )		force=true;;
+		-l | --label )		label=true;;
         * )					if [ -z "$3" ]; then
 								dir="$1"
 								shift
@@ -131,6 +134,7 @@ if [[ -d "$dir" ]]; then
 			filename=${basename%.*}
 			
 			
+			
 			if ! $force; then
 				if [[ -s "$outicns/$filename.icns" ]] && [[ -s "$outico/$filename.ico" ]] && [[ -s "$outdir/$filename.png" ]]; then
 					echo "$basename already processed skipping."
@@ -148,6 +152,17 @@ if [[ -d "$dir" ]]; then
 			outfile="$tmpdir/${filename}.png"
 					
 			$(convert "$file" -resize 512 -extent 512x512+0-132 "$path/templateImage.tga" -compose copy-opacity -composite "$path/templateFolder.tga" -compose dst-over -composite "$outfile")
+			
+			#label
+			if $label; then
+				name="${filename##* - }"
+				name="${name% \(*}"
+				#echo "$name"
+				tmptxt="$tmpdir/tmptext.png"
+				$(convert -size 154x30 -background transparent -fill "#CCCCCC" -font Impact -gravity south label:"$name" "$tmptxt")
+				$(convert "$outfile" "$tmptxt" -gravity center -geometry -122-160 -compose screen -composite "$outfile")  
+				
+			fi
 			
 		
 			#tmp dir for making the small images needed for icons
