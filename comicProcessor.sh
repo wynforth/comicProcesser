@@ -439,7 +439,7 @@ if $makebackup; then
 		result=$(mkdir -p "$backup" 2>&1)
 		if [ ! -d "$backup" ]; then
 			if $verbose; then echo "$result"; fi
-			echo "Couldn't create backup directory. Script stopping to prevent dataloss"
+			echo "Couldn't create backup directory. Script stopping to prevent data loss"
 			exit 1
 		fi
 	fi

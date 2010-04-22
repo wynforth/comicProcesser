@@ -176,7 +176,11 @@ if [[ -d "$dir" ]]; then
 				#makes a .ico file that should be usable on windows and linux
 				#icos should be 256, 48, 32, 24, 16
 				if $ico; then
-					sizes=("256" "48" "32" "24" "16")
+					if $fullrange; then
+						sizes=("512" "256" "48" "32" "24" "16")
+					else
+						sizes=("256" "48" "32" "24" "16") #512 isn't really useful and wastes space
+					fi
 					toEval="convert"
 					for i in ${sizes[@]}; do
 						$(convert "$outfile" -resize $i "$tmpdir/tmp/tmp_$i.png")
@@ -199,7 +203,6 @@ if [[ -d "$dir" ]]; then
 						f="$tmpdir/tmp/tmp_$i.png"
 						if [[ ! -s "$f" ]]; then
 							$(convert "$outfile" -resize $i "$tmpdir/tmp/tmp_$i.png")
-					
 						fi
 						toEval="$toEval \"$tmpdir/tmp/tmp_$i.png\""
 					done
